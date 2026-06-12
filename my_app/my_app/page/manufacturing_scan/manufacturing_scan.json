@@ -1,0 +1,20 @@
+{
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "Page",
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "My App",
+ "name": "manufacturing-scan",
+ "owner": "Administrator",
+ "page_name": "manufacturing-scan",
+ "roles": [
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "title": "Manufacturing Scan"
+}

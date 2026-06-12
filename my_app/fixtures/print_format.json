@@ -1,0 +1,11 @@
+[
+  {
+    "doctype": "Print Format",
+    "name": "Batch Label",
+    "doc_type": "Batch",
+    "standard": "No",
+    "custom_format": 1,
+    "print_format_type": "Jinja",
+    "html": "{%- set qr_b64 = get_qr_base64(doc.name) -%}\n<style>\n  @page { size: 80mm 50mm; margin: 0; }\n  body, .print-format { margin: 0 !important; padding: 0 !important; background: #fff; }\n  .batch-label {\n    box-sizing: border-box;\n    width: 80mm;\n    height: 50mm;\n    padding: 2mm;\n    font-family: sans-serif;\n    display: flex;\n    align-items: center;\n    gap: 3mm;\n    overflow: hidden;\n  }\n  .qr-block {\n    flex-shrink: 0;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 1mm;\n  }\n  .qr-block img { width: 28mm; height: 28mm; }\n  .qr-label {\n    font-size: 6pt;\n    text-align: center;\n    word-break: break-all;\n    max-width: 28mm;\n  }\n  .info {\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    gap: 1.5mm;\n    overflow: hidden;\n    padding-top: 1mm;\n  }\n  .item-name {\n    font-size: 9pt;\n    font-weight: bold;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .info table { font-size: 8pt; border-collapse: collapse; }\n  .info td { padding: 0.5mm 0; vertical-align: top; }\n  .lbl { color: #555; padding-right: 4mm; }\n</style>\n<div class=\"batch-label\">\n  <div class=\"qr-block\">\n    <img src=\"data:image/png;base64,{{ qr_b64 }}\" alt=\"{{ doc.name }}\">\n    <div class=\"qr-label\">{{ doc.name }}</div>\n  </div>\n  <div class=\"info\">\n    <div class=\"item-name\">{{ doc.item_name or doc.item }}</div>\n    <table>\n      <tr>\n        <td class=\"lbl\">Produced:</td>\n        <td>{{ frappe.format_date(doc.manufacturing_date or doc.creation, 'yyyy-MM-dd') }}</td>\n      </tr>\n      {%- if doc.expiry_date %}\n      <tr>\n        <td class=\"lbl\">Expires:</td>\n        <td>{{ frappe.format_date(doc.expiry_date, 'yyyy-MM-dd') }}</td>\n      </tr>\n      {%- endif %}\n    </table>\n  </div>\n</div>"
+  }
+]
