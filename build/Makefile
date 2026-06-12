@@ -4,6 +4,7 @@ DOMAIN = erp.snrub.net
 ENV_FILE = .env
 CONFIG_FILE = docker-compose.yaml
 
+include .env
 .PHONY: image config deploy setup
 
 image:
@@ -13,7 +14,7 @@ image:
 		--file Containerfile .
 	sed -i 's/CUSTOM_TAG=.*/CUSTOM_TAG=$(VERSION)/g' $(ENV_FILE)
 
-config:
+config: image
 	docker compose -p $(IMAGE) \
 		-f compose.yaml \
 		-f overrides/compose.mariadb.yaml \
@@ -24,14 +25,15 @@ config:
 		--env-file $(ENV_FILE) \
 		config > $(CONFIG_FILE)
 
-deploy: image config
-	docker compose -p $(IMAGE) \
-		-f $(CONFIG_FILE) \
-		--pull always \
-		up -d 
+deploy: config
+	docker compose -p $(IMAGE) -f $(CONFIG_FILE) up -d 
+
+update: config
+	docker compose -p $(IMAGE) -f $(CONFIG_FILE) pull
+	docker compose -p $(IMAGE) -f $(CONFIG_FILE) up -d
 
 setup: deploy
-	docker compose -p $(IMAGE) exec backend \
+	docker compose -p $(IMAGE) -f $(CONFIG_FILE) exec backend \
 		bench new-site $(DOMAIN) \
 			--mariadb-user-host-login-scope='%' \
 			--db-root-password $(DB_PASSWORD) \
