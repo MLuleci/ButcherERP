@@ -1,0 +1,10 @@
+services:
+  frontend:
+    networks:
+      reverseproxy-nw: {}
+    ports:
+      - ${HTTP_PUBLISH_PORT:-8080}:8080
+
+networks:
+  reverseproxy-nw:
+    external: true
