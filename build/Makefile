@@ -1,5 +1,5 @@
 IMAGE = butcher-erp
-VERSION = $(shell git rev-list --count HEAD)
+VERSION = $(shell git rev-parse --short HEAD)
 DOMAIN = erp.snrub.net
 ENV_FILE = .env
 CONFIG_FILE = docker-compose.yaml
