@@ -10,8 +10,7 @@ image:
 	docker buildx build \
 		--secret type=file,id=apps_json,src=apps.json \
 		--tag $(IMAGE):$(VERSION) \
-		--file Containerfile \
-		--push .
+		--file Containerfile .
 	sed -i 's/CUSTOM_TAG=.*/CUSTOM_TAG=$(VERSION)/g' $(ENV_FILE)
 
 config:
