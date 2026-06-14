@@ -1,11 +1,10 @@
 IMAGE = butcher-erp
 VERSION = $(shell git rev-parse --short HEAD)
-DOMAIN = erp.snrub.net
 ENV_FILE = .env
 CONFIG_FILE = docker-compose.yaml
 
 include .env
-.PHONY: image config deploy setup clean
+.PHONY: image config deploy setup
 
 image:
 	docker buildx build \
@@ -13,9 +12,8 @@ image:
 		--tag $(IMAGE):$(VERSION) \
 		--build-arg CACHE_BUST="$(VERSION)" \
 		--file Containerfile .
-	sed -i 's/CUSTOM_TAG=.*/CUSTOM_TAG=$(VERSION)/g' $(ENV_FILE)
 
-config: image
+config:
 	docker compose -p $(IMAGE) \
 		-f compose.yaml \
 		-f overrides/compose.mariadb.yaml \
@@ -28,13 +26,6 @@ config: image
 
 deploy: config
 	docker compose -p $(IMAGE) -f $(CONFIG_FILE) up -d 
-
-update: config
-	docker compose -p $(IMAGE) -f $(CONFIG_FILE) pull
-	docker compose -p $(IMAGE) -f $(CONFIG_FILE) up -d
-
-clean:
-	docker compose -p $(IMAGE) down -v
 
 setup: deploy
 	docker compose -p $(IMAGE) -f $(CONFIG_FILE) exec backend \
