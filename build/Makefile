@@ -13,7 +13,7 @@ image:
 		--build-arg CACHE_BUST="$(VERSION)" \
 		--file Containerfile .
 
-config:
+config: image
 	docker compose -p $(IMAGE) \
 		-f compose.yaml \
 		-f overrides/compose.mariadb.yaml \
