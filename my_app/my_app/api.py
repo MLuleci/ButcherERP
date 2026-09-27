@@ -181,6 +181,11 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	for item_code, batches in items.items():
 		item = bom_items.get(item_code)
 		for batch in batches:
+			batch_doc = frappe.db.get_value("Batch", batch.batch_no, ["item"], as_dict=True)
+			batch_item = batch_doc["item"]
+			if batch_item != item_code:
+				frappe.throw(_("Batch {0} is for item {1} not {2}").format(batch.batch_no, batch_item, item_code))
+
 			se.append(
 				"items",
 				{
