@@ -1,5 +1,4 @@
 import json
-from dataclasses import dataclass
 from datetime import date
 
 import frappe
@@ -97,7 +96,7 @@ def get_bom_details(bom, qty, explode=False):
 		)
 
 	return {
-		"id": bom_doc.name,
+		"name": bom_doc.name,
 		"qty": qty,
 		"item_code": fg_doc.name,
 		"item_name": fg_doc.item_name,
@@ -106,32 +105,6 @@ def get_bom_details(bom, qty, explode=False):
 		"shelf_life_in_days": int(fg_doc.shelf_life_in_days or 0),
 		"items": items,
 	}
-
-
-@dataclass
-class Part:
-	batch_no: str
-	qty: float
-
-
-def parse_items(raw) -> dict[str, list[Part]]:
-	if not isinstance(raw, str):
-		frappe.throw(_("Items not provided"))
-	
-	parsed: dict = json.loads(raw)
-	items = {}
-	for item_code, batches in parsed.items():
-		for batch in batches:
-			batch_no = batch.get("batch_no")
-			if not isinstance(batch_no, str) or not batch_no:
-				frappe.throw(_("Batch missing 'batch_no'"))
-
-			qty = flt(batch.get("qty"))
-			if not qty:
-				frappe.throw(_("Batch missing 'qty'"))
-
-			items.setdefault(item_code, []).append(Part(batch_no, qty))
-	return items
 
 
 @frappe.whitelist()
@@ -149,7 +122,8 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	except ValueError:
 		frappe.throw(_("Invalid expiry date"))
 
-	items = parse_items(items)
+  # { [item_code]: { [batch_no]: quantity } } 
+	items: dict[str, dict[str, float]] = json.loads(items)
 	bom_doc = get_bom(bom)
 	fg_doc = get_fg(bom_doc.item)
 
@@ -180,24 +154,24 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	# Add ingredients:
 	for item_code, batches in items.items():
 		item = bom_items.get(item_code)
-		for batch in batches:
-			batch_doc = frappe.db.get_value("Batch", batch.batch_no, ["item"], as_dict=True)
+		for batch_no, quantity in batches.items():
+			batch_doc = frappe.db.get_value("Batch", batch_no, ["item"], as_dict=True)
 			batch_item = batch_doc["item"]
 			if batch_item != item_code:
-				frappe.throw(_("Batch {0} is for item {1} not {2}").format(batch.batch_no, batch_item, item_code))
+				frappe.throw(_("Batch {0} is for item {1} not {2}").format(batch_no, batch_item, item_code))
 
 			se.append(
 				"items",
 				{
 					"item_code": item_code,
-					"qty": batch.qty,
+					"qty": quantity,
 					"uom": item.uom or item.stock_uom,
 					"stock_uom": item.stock_uom,
 					"conversion_factor": flt(item.get("conversion_factor")) or 1.0,
 					# We always take from the source warehouse for simplicity
 					"s_warehouse": settings.source_warehouse,
 					"is_finished_item": 0,
-					"batch_no": batch.batch_no,
+					"batch_no": batch_no,
 					"use_serial_batch_fields": 1,
 				},
 			)
@@ -232,9 +206,9 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	se.submit()
 
 	return {
-		"stock_entry": se.name,
+		"name": se.name,
 		"batch_no": fg_batch.name,
-		"fg_item_name": fg_doc.name,
+		"item_name": fg_doc.name,
 		"production_date": today(),
 		"expiry_date": str(expiry_date) if expiry_date else None,
 		"is_finished": is_finished
