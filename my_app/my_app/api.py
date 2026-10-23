@@ -184,8 +184,13 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 
 	tolerance = get_tolerance_percent(bom)
 	for item_code, batches in items.items():
+		for batch_no, quantity in batches.items():
+			batches[batch_no] = flt(quantity)
+			if batches[batch_no] <= 0:
+				frappe.throw(_("Quantity for batch {0} must be greater than zero").format(batch_no))
+
 		required = flt(bom_items[item_code].qty)
-		chosen = sum(flt(q) for q in batches.values())
+		chosen = sum(batches.values())
 		if abs(chosen - required) > required * tolerance / 100 + 0.0005:
 			frappe.throw(_("{0}: {1} used, {2} required (±{3}%)").format(
 				bom_items[item_code].item_name, flt(chosen, 3), flt(required, 3), tolerance))
@@ -207,10 +212,6 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	for item_code, batches in items.items():
 		item = bom_items.get(item_code)
 		for batch_no, quantity in batches.items():
-			quantity = flt(quantity)
-			if quantity <= 0:
-				frappe.throw(_("Quantity for batch {0} must be greater than zero").format(batch_no))
-
 			batch_item = frappe.db.get_value("Batch", batch_no, "item")
 			if not batch_item:
 				frappe.throw(_("Batch {0} not found").format(batch_no))
