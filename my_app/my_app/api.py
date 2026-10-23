@@ -164,8 +164,13 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	)
 
 	# Verify included items match BOM:
-	if items.keys() != bom_items.keys():
-		frappe.throw(_("Items do not match BOM"))
+	missing = bom_items.keys() - items.keys()
+	extra = items.keys() - bom_items.keys()
+	if missing or extra:
+		frappe.throw(_("Items do not match BOM. Missing: {0}. Not in BOM: {1}").format(
+			", ".join(bom_items[i].item_name for i in missing) or "-",
+			", ".join(extra) or "-",
+		))
 
 	settings = frappe.get_single("My App Settings")
 	if not settings.source_warehouse or not settings.target_warehouse:
