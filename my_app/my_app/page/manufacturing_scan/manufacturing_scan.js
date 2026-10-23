@@ -79,6 +79,9 @@ class ManufacturingScanPage {
 			callback: (r) => {
 				if (r.exc) return;
 				this.bom_data = r.message;
+				this.bom_data.items.forEach((item) => {
+					if (item.must_be_whole_number) item.qty = Math.round(item.qty);
+				});
 				this.bom_data.bom = bom;
 				this.bom_data.fg_qty = qty;
 				this.render_step2();
