@@ -18,6 +18,7 @@ def get_bom(bom: str) -> dict:
 			"item",
 			"company",
 			"is_active",
+			"docstatus",
 			"default_source_warehouse",
 			"default_target_warehouse",
 		], 
@@ -28,6 +29,8 @@ def get_bom(bom: str) -> dict:
 		frappe.throw(_("BOM {0} not found").format(bom))
 	if not bom_doc.is_active:
 		frappe.throw(_("BOM {0} is not active").format(bom))
+	if bom_doc.docstatus != 1:
+		frappe.throw(_("BOM {0} is not submitted").format(bom))
 
 	return bom_doc
 
