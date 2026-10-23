@@ -78,6 +78,15 @@ def entry_summary(se: StockEntry) -> dict:
 	}
 
 
+def get_tolerance_percent(bom: str) -> float:
+	"""Allowed difference between chosen and required item quantities, in percent."""
+	return (
+		flt(frappe.db.get_value("BOM", bom, "pda_tolerance_percent"))
+		or flt(frappe.db.get_single_value("My App Settings", "default_tolerance_percent"))
+		or 5.0
+	)
+
+
 @frappe.whitelist()
 def get_bom_details(bom, qty, explode=False):
 	"""Return BOM items scaled to qty, plus finished-good metadata."""
@@ -122,6 +131,7 @@ def get_bom_details(bom, qty, explode=False):
 		"uom": bom_doc.uom,
 		"stock_uom": fg_doc.stock_uom,
 		"shelf_life_in_days": int(fg_doc.shelf_life_in_days or 0),
+		"tolerance_percent": get_tolerance_percent(bom),
 		"items": items,
 	}
 
@@ -171,6 +181,14 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 			", ".join(bom_items[i].item_name for i in missing) or "-",
 			", ".join(extra) or "-",
 		))
+
+	tolerance = get_tolerance_percent(bom)
+	for item_code, batches in items.items():
+		required = flt(bom_items[item_code].qty)
+		chosen = sum(flt(q) for q in batches.values())
+		if abs(chosen - required) > required * tolerance / 100 + 0.0005:
+			frappe.throw(_("{0}: {1} used, {2} required (±{3}%)").format(
+				bom_items[item_code].item_name, flt(chosen, 3), flt(required, 3), tolerance))
 
 	settings = frappe.get_single("My App Settings")
 	if not settings.source_warehouse or not settings.target_warehouse:

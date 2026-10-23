@@ -10,5 +10,16 @@
     "unique": 1,
     "no_copy": 1,
     "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "BOM-pda_tolerance_percent",
+    "dt": "BOM",
+    "fieldname": "pda_tolerance_percent",
+    "fieldtype": "Percent",
+    "label": "PDA Tolerance",
+    "description": "Allowed difference between the chosen and required quantity of each item. Leave at 0 to use the default from My App Settings.",
+    "insert_after": "uom",
+    "allow_on_submit": 1
   }
 ]

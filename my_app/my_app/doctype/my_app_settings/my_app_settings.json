@@ -5,7 +5,8 @@
  "engine": "InnoDB",
  "field_order": [
   "source_warehouse",
-  "target_warehouse"
+  "target_warehouse",
+  "default_tolerance_percent"
  ],
  "fields": [
   {
@@ -21,11 +22,17 @@
    "label": "Default Target Warehouse (Finished Goods)",
    "options": "Warehouse",
    "reqd": 1
+  },
+  {
+   "description": "Used for BOMs without a PDA tolerance. Leave at 0 to use 5%.",
+   "fieldname": "default_tolerance_percent",
+   "fieldtype": "Percent",
+   "label": "Default PDA Tolerance"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2026-10-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "My App",
  "name": "My App Settings",
