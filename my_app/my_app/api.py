@@ -5,7 +5,7 @@ from erpnext.manufacturing.doctype.bom.bom import get_bom_items_as_dict
 from erpnext.stock.doctype.batch.batch import Batch
 from erpnext.stock.doctype.stock_entry.stock_entry import StockEntry
 from frappe import _
-from frappe.utils import flt, sbool, today
+from frappe.utils import flt, getdate, sbool, today
 
 
 def get_bom(bom: str) -> dict:
@@ -116,10 +116,14 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	explode = sbool(explode)
 	is_finished = sbool(is_finished)
 
+	if not expiry_date:
+		frappe.throw(_("Expiry date is required"))
 	try:
-		expiry_date = date.fromisoformat(expiry_date) if expiry_date else None
+		expiry_date = date.fromisoformat(str(expiry_date))
 	except ValueError:
 		frappe.throw(_("Invalid expiry date"))
+	if expiry_date <= getdate(today()):
+		frappe.throw(_("Expiry date must be after today"))
 
   # { [item_code]: { [batch_no]: quantity } } 
 	items: dict[str, dict[str, float]] = frappe.parse_json(items)
@@ -178,8 +182,7 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	# Finished-goods batch:
 	fg_batch: Batch = frappe.new_doc("Batch")
 	fg_batch.item = bom_doc.item
-	if expiry_date:
-		fg_batch.expiry_date = expiry_date
+	fg_batch.expiry_date = expiry_date
 	fg_batch.insert(ignore_permissions=True)
 
 	# Add finished-goods:
