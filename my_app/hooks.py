@@ -89,6 +89,10 @@ fixtures = [
 
 after_migrate = "my_app.install.after_migrate"
 
+has_permission = {
+	"Stock Entry": "my_app.install.stock_entry_has_permission",
+}
+
 # Installation
 # ------------
 
