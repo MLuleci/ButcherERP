@@ -1,4 +1,3 @@
-import json
 from datetime import date
 
 import frappe
@@ -123,7 +122,7 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 		frappe.throw(_("Invalid expiry date"))
 
   # { [item_code]: { [batch_no]: quantity } } 
-	items: dict[str, dict[str, float]] = json.loads(items)
+	items: dict[str, dict[str, float]] = frappe.parse_json(items)
 	bom_doc = get_bom(bom)
 	fg_doc = get_fg(bom_doc.item)
 
