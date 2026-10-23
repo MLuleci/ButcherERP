@@ -90,14 +90,13 @@ class ManufacturingScanPage {
 
 	render_step2() {
 		const d = this.bom_data;
+		this.request_id = frappe.utils.get_random(32);
 		const rows_html = d.items
 			.map(
 				(item, idx) => `
 			<div class="bom-item-row" data-idx="${idx}"
 				data-item="${frappe.utils.escape_html(item.item_code)}"
 				data-qty="${item.qty}"
-				data-uom="${frappe.utils.escape_html(item.uom)}"
-				data-warehouse="${frappe.utils.escape_html(item.s_warehouse || "")}"
 				style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-color);">
 				<div style="flex:1;min-width:0;">
 					<div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -136,12 +135,12 @@ class ManufacturingScanPage {
 						<button id="btn-back" class="btn btn-default btn-xs">${__("← Back")}</button>
 					</div>
 					<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
-						${frappe.utils.escape_html(d.fg_item_name)} &mdash; ${d.fg_qty} ${__("units")}
+						${frappe.utils.escape_html(d.item_name)} &mdash; ${d.fg_qty} ${frappe.utils.escape_html(d.uom)}
 					</div>
 
 					<div class="form-group" style="margin-bottom:16px;">
 						<label class="control-label">${__("Days Until Expiry")}</label>
-						<input id="fg-expiry-days" type="number" min="0" step="1" class="form-control"
+						<input id="fg-expiry-days" type="number" min="1" step="1" class="form-control"
 							style="max-width:200px;" value="${d.shelf_life_in_days || ""}">
 					</div>
 
@@ -325,8 +324,8 @@ class ManufacturingScanPage {
 	// ─── Step 3: Label preview ──────────────────────────────────────────────────
 
 	render_step3(result) {
-		const { stock_entry, batch_no } = result;
-		const se_url = `/app/stock-entry/${stock_entry}`;
+		const { name, batch_no } = result;
+		const se_url = `/app/stock-entry/${encodeURIComponent(name)}`;
 		const preview_url = `/printview?doctype=Batch&name=${encodeURIComponent(batch_no)}&format=Batch+Label&no_letterhead=1`;
 
 		this.page.main.html(`
@@ -376,43 +375,34 @@ class ManufacturingScanPage {
 
 	submit_entry() {
 		const d = this.bom_data;
-		const items = this.page.main
-			.find(".bom-item-row")
-			.toArray()
-			.map((el) => {
-				const $el = $(el);
-				return {
-					item_code: $el.data("item"),
-					qty: parseFloat($el.data("qty")),
-					uom: $el.data("uom"),
-					s_warehouse: $el.data("warehouse"),
-					batch_no: $el.data("batch") || "",
-				};
-			});
+		// { [item_code]: { [batch_no]: quantity } }
+		const items = {};
+		this.page.main.find(".bom-item-row").each((_, el) => {
+			const $el = $(el);
+			items[$el.data("item")] = { [$el.data("batch")]: parseFloat($el.data("qty")) };
+		});
 
 		const expiry_days = parseInt(this.page.main.find("#fg-expiry-days").val());
-		let expiry_date = "";
-		if (expiry_days > 0) {
-			const d_exp = new Date();
-			d_exp.setDate(d_exp.getDate() + expiry_days);
-			expiry_date = d_exp.toISOString().slice(0, 10);
+		if (!(expiry_days > 0)) {
+			frappe.msgprint({ title: __("Required"), message: __("Please enter the days until expiry."), indicator: "orange" });
+			return;
 		}
 
 		frappe.call({
 			method: "my_app.my_app.api.create_manufacture_entry",
 			args: {
 				bom: d.bom,
-				fg_qty: d.fg_qty,
+				qty: d.fg_qty,
 				items: JSON.stringify(items),
-				expiry_date,
+				expiry_date: moment(frappe.datetime.get_today())
+					.add(expiry_days, "days")
+					.format(frappe.defaultDateFormat),
+				request_id: this.request_id,
 			},
 			freeze: true,
 			freeze_message: __("Creating Stock Entry…"),
 			callback: (r) => {
-				if (r.exc) {
-					frappe.msgprint({ title: __("Submission Failed"), message: r.exc, indicator: "red" });
-					return;
-				}
+				if (r.exc) return;
 				this.render_step3(r.message);
 			},
 		});
