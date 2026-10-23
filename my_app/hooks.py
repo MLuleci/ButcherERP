@@ -82,7 +82,8 @@ jinja = {
 }
 
 fixtures = [
-	{"dt": "Print Format", "filters": [["name", "=", "Batch Label"]]}
+	{"dt": "Print Format", "filters": [["name", "=", "Batch Label"]]},
+	{"dt": "Custom Field", "filters": [["name", "=", "Stock Entry-pda_request_id"]]},
 ]
 
 # Installation

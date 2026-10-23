@@ -1,0 +1,14 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Stock Entry-pda_request_id",
+    "dt": "Stock Entry",
+    "fieldname": "pda_request_id",
+    "fieldtype": "Data",
+    "label": "PDA Request ID",
+    "insert_after": "remarks",
+    "unique": 1,
+    "no_copy": 1,
+    "read_only": 1
+  }
+]

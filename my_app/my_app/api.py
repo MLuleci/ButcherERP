@@ -124,8 +124,13 @@ def get_bom_details(bom, qty, explode=False):
 
 
 @frappe.whitelist()
-def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, is_finished=True):
+def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, is_finished=True, request_id=None):
 	"""Create and submit a Manufacture Stock Entry."""
+	if request_id:
+		existing = frappe.db.get_value("Stock Entry", {"pda_request_id": request_id, "docstatus": 1}, "name")
+		if existing:
+			return entry_summary(frappe.get_doc("Stock Entry", existing))
+
 	qty = flt(qty)
 	if not qty:
 		frappe.throw(_("Invalid quantity"))
@@ -170,6 +175,7 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	se.bom_no = bom
 	se.company = bom_doc.company
 	se.fg_completed_qty = qty
+	se.pda_request_id = request_id
 
 	# Add ingredients:
 	for item_code, batches in items.items():
