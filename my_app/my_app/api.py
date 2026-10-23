@@ -62,6 +62,14 @@ def get_fg(item: str) -> dict:
 	return fg_doc
 
 
+def validate_fg_qty(qty: float, uom: str, whole_number_uoms: set | None = None):
+	"""Reject a fractional finished-goods quantity in a whole-number unit."""
+	if whole_number_uoms is None:
+		whole_number_uoms = get_whole_number_uoms([uom])
+	if uom in whole_number_uoms and qty != cint(qty):
+		frappe.throw(_("Quantity must be a whole number for unit {0}").format(uom))
+
+
 def entry_summary(se: StockEntry) -> dict:
 	"""Summarise a submitted Manufacture Stock Entry."""
 	fg_row = next(row for row in se.items if row.is_finished_item)
@@ -114,6 +122,7 @@ def get_bom_details(bom, qty, explode=False):
 	whole_number_uoms = get_whole_number_uoms(
 		[bom_doc.uom] + [item.uom or item.stock_uom for item in bom_items.values()]
 	)
+	validate_fg_qty(qty, bom_doc.uom, whole_number_uoms)
 
 	# Ingredient details:
 	items = []
@@ -171,6 +180,7 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
   # { [item_code]: { [batch_no]: quantity } } 
 	items: dict[str, dict[str, float]] = frappe.parse_json(items)
 	bom_doc = get_bom(bom)
+	validate_fg_qty(qty, bom_doc.uom)
 	fg_doc = get_fg(bom_doc.item)
 
 	bom_items = get_bom_items_as_dict(
