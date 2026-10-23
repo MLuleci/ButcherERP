@@ -14,3 +14,5 @@
 "Quantity for batch {0} must be greater than zero","Количеството за партида {0} трябва да е по-голямо от нула"
 "Batch {0} not found","Партида {0} не е намерена"
 "Batch {0} is for item {1} not {2}","Партида {0} е за артикул {1}, а не за {2}"
+"Quantity for batch {0} must be a whole number","Количеството за партида {0} трябва да е цяло число"
+"{0}: {1} used, {2} required (±0.5)","{0}: използвани {1}, необходими {2} (±0.5)"

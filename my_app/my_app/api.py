@@ -4,8 +4,9 @@ import frappe
 from erpnext.manufacturing.doctype.bom.bom import get_bom_items_as_dict
 from erpnext.stock.doctype.batch.batch import Batch
 from erpnext.stock.doctype.stock_entry.stock_entry import StockEntry
+from erpnext.utilities.transaction_base import get_whole_number_uoms
 from frappe import _
-from frappe.utils import flt, getdate, sbool, today
+from frappe.utils import cint, flt, getdate, sbool, today
 
 
 def get_bom(bom: str) -> dict:
@@ -72,6 +73,7 @@ def entry_summary(se: StockEntry) -> dict:
 		"item_name": fg_row.item_name,
 		"qty": flt(fg_row.qty),
 		"uom": fg_row.uom,
+		"must_be_whole_number": bool(get_whole_number_uoms([fg_row.uom])),
 		"production_date": str(se.posting_date),
 		"expiry_date": str(frappe.db.get_value("Batch", fg_row.batch_no, "expiry_date")),
 		"is_finished": fg_row.t_warehouse == settings.target_warehouse,
@@ -109,6 +111,10 @@ def get_bom_details(bom, qty, explode=False):
 		fetch_qty_in_stock_uom=False
 	)
 
+	whole_number_uoms = get_whole_number_uoms(
+		[bom_doc.uom] + [item.uom or item.stock_uom for item in bom_items.values()]
+	)
+
 	# Ingredient details:
 	items = []
 	for item_code, item in bom_items.items():
@@ -116,8 +122,9 @@ def get_bom_details(bom, qty, explode=False):
 			{
 				"item_code": item_code,
 				"item_name": item.item_name,
-				"qty": flt(item.qty),
+				"qty": flt(item.qty, 3),
 				"uom": item.uom or item.stock_uom,
+				"must_be_whole_number": (item.uom or item.stock_uom) in whole_number_uoms,
 				"stock_uom": item.stock_uom,
 				"conversion_factor": flt(item.get("conversion_factor")) or 1.0,
 			}
@@ -129,6 +136,7 @@ def get_bom_details(bom, qty, explode=False):
 		"item_code": fg_doc.name,
 		"item_name": fg_doc.item_name,
 		"uom": bom_doc.uom,
+		"must_be_whole_number": bom_doc.uom in whole_number_uoms,
 		"stock_uom": fg_doc.stock_uom,
 		"shelf_life_in_days": int(fg_doc.shelf_life_in_days or 0),
 		"tolerance_percent": get_tolerance_percent(bom),
@@ -183,17 +191,27 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 		))
 
 	tolerance = get_tolerance_percent(bom)
+	whole_number_uoms = get_whole_number_uoms(item.uom or item.stock_uom for item in bom_items.values())
 	for item_code, batches in items.items():
+		item = bom_items[item_code]
+		is_whole = (item.uom or item.stock_uom) in whole_number_uoms
 		for batch_no, quantity in batches.items():
 			batches[batch_no] = flt(quantity)
 			if batches[batch_no] <= 0:
 				frappe.throw(_("Quantity for batch {0} must be greater than zero").format(batch_no))
+			if is_whole and batches[batch_no] != cint(batches[batch_no]):
+				frappe.throw(_("Quantity for batch {0} must be a whole number").format(batch_no))
 
-		required = flt(bom_items[item_code].qty)
+		required = flt(item.qty)
 		chosen = sum(batches.values())
-		if abs(chosen - required) > required * tolerance / 100 + 0.0005:
+		# Whole-number units can't meet a percentage on small quantities, so allow ±0.5 instead
+		allowed = 0.5 if is_whole else required * tolerance / 100
+		if abs(chosen - required) > allowed + 0.0005:
+			if is_whole:
+				frappe.throw(_("{0}: {1} used, {2} required (±0.5)").format(
+					item.item_name, flt(chosen, 3), flt(required, 3)))
 			frappe.throw(_("{0}: {1} used, {2} required (±{3}%)").format(
-				bom_items[item_code].item_name, flt(chosen, 3), flt(required, 3), tolerance))
+				item.item_name, flt(chosen, 3), flt(required, 3), tolerance))
 
 	settings = frappe.get_single("My App Settings")
 	if not settings.source_warehouse or not settings.target_warehouse:
