@@ -58,6 +58,23 @@ def get_fg(item: str) -> dict:
 	return fg_doc
 
 
+def entry_summary(se: StockEntry) -> dict:
+	"""Summarise a submitted Manufacture Stock Entry."""
+	fg_row = next(row for row in se.items if row.is_finished_item)
+	settings = frappe.get_single("My App Settings")
+	return {
+		"name": se.name,
+		"batch_no": fg_row.batch_no,
+		"item_code": fg_row.item_code,
+		"item_name": fg_row.item_name,
+		"qty": flt(fg_row.qty),
+		"uom": fg_row.uom,
+		"production_date": str(se.posting_date),
+		"expiry_date": str(frappe.db.get_value("Batch", fg_row.batch_no, "expiry_date")),
+		"is_finished": fg_row.t_warehouse == settings.target_warehouse,
+	}
+
+
 @frappe.whitelist()
 def get_bom_details(bom, qty, explode=False):
 	"""Return BOM items scaled to qty, plus finished-good metadata."""
@@ -207,11 +224,4 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	se.insert()
 	se.submit()
 
-	return {
-		"name": se.name,
-		"batch_no": fg_batch.name,
-		"item_name": fg_doc.name,
-		"production_date": today(),
-		"expiry_date": str(expiry_date) if expiry_date else None,
-		"is_finished": is_finished
-	}
+	return entry_summary(se)
