@@ -84,7 +84,10 @@ jinja = {
 fixtures = [
 	{"dt": "Print Format", "filters": [["name", "=", "Batch Label"]]},
 	{"dt": "Custom Field", "filters": [["name", "in", ["Stock Entry-pda_request_id", "BOM-pda_tolerance_percent"]]]},
+	{"dt": "Role", "filters": [["name", "=", "PDA User"]]},
 ]
+
+after_migrate = "my_app.install.after_migrate"
 
 # Installation
 # ------------
