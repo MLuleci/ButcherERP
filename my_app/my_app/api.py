@@ -189,6 +189,10 @@ def create_manufacture_entry(bom, qty, items, expiry_date=None, explode=False, i
 	for item_code, batches in items.items():
 		item = bom_items.get(item_code)
 		for batch_no, quantity in batches.items():
+			quantity = flt(quantity)
+			if quantity <= 0:
+				frappe.throw(_("Quantity for batch {0} must be greater than zero").format(batch_no))
+
 			batch_item = frappe.db.get_value("Batch", batch_no, "item")
 			if not batch_item:
 				frappe.throw(_("Batch {0} not found").format(batch_no))
